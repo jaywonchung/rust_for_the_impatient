@@ -1,28 +1,30 @@
 /// Step 3 of the Rust for the Impatient tutorial.
 ///
-/// Multithreading and the type system.
+/// Let's get into threading.
+///
+/// We're going to use `std::thread::scope`, which is a helper that
+/// automatically joins all threads spawned inside it. `s.spawn` takes the
+/// closure that contains the code to be executed in a separate thread.
+///
+/// This compiles and works well.
+///
+/// Additionally, we're using the `rand` crate to generate random numbers.
+/// When you run `cargo add rand` in your command line, Cargo automatically
+/// adds the new dependency into your `Cargo.toml` file.
 
 use rand::Rng;
 
 struct Paper {
     id: u32,
     title: String,
-    reviews: Vec<Review>,
-}
-
-struct Review {
-    score: u8,
+    reviews: Vec<u8>,
 }
 
 fn print_decision(paper: Paper) {
-    let mut total_score: u8 = 0;
-    for (i, review) in paper.reviews.iter().enumerate() {
-        total_score += review.score;
-        println!("Review #{}: {}", i, review.score);
-    }
-    let average = total_score as f32 / paper.reviews.len() as f32;
+    let total_score: u8 = paper.reviews.iter().sum();
+    let accept_threshold = paper.reviews.len() as u8 * 3;
 
-    if average > 3.0 {
+    if total_score > accept_threshold {
         println!("Accepted submission #{} \"{}\"", paper.id, paper.title);
     } else {
         println!("Rejected submission #{} \"{}\"", paper.id, paper.title);
@@ -36,15 +38,12 @@ fn main() {
         reviews: Vec::new(),
     };
 
-    let num_reviews = 3;
     std::thread::scope(|s| {
-        for _ in 0..num_reviews {
-            s.spawn(|| {
-                let mut rng = rand::thread_rng();
-                let score = rng.gen_range(1..6);
-                paper.reviews.push(Review { score });
-            });
-        }
+        s.spawn(|| {
+            let mut rng = rand::rng();
+            let score = rng.random_range(1..6);
+            paper.reviews.push(score);
+        });
     });
 
     print_decision(paper);
